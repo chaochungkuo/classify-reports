@@ -13,9 +13,10 @@ classifyanything/
 ├── notebooks/
 │   ├── 01_data_ingestion.ipynb          # Load and validate data
 │   ├── 02_data_exploration.ipynb        # EDA and quality assessment
-│   ├── 03_preprocessing.ipynb           # Cleaning, train-test split, feature engineering
-│   ├── 04_model_training.ipynb          # Train and tune multiple models
-│   ├── 05_model_evaluation.ipynb        # Evaluate and compare models
+│   ├── 03_preprocessing.ipynb           # Cleaning, train-test split, basic feature engineering
+│   ├── 04_feature_selection.ipynb       # Select top features by importance (fit on training data only)
+│   ├── 05_model_training.ipynb          # Train and tune multiple models
+│   ├── 06_model_evaluation.ipynb        # Evaluate and compare models
 │   └── 06_model_deployment.ipynb        # Deploy best model and generate reports
 ├── data/
 │   ├── raw/                             # Original data files
@@ -321,4 +322,12 @@ generate_pdf = false
 include_plots = true
 save_models = true
 include_gene_names = true  # Include gene names in reports
+
+[feature_selection]
+# Method: variance, select_k_best, model_importance, rfe, lasso, none
+method = "model_importance"
+# Number of features to select (if applicable)
+n_features = 50
+# Scoring function or model for importance (if needed)
+scoring = "f_classif"  # or "mutual_info", "random_forest", etc.
 ```

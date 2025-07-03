@@ -47,10 +47,12 @@ random_state = 42
 stratify = true
 
 [feature_selection]
-# Method: variance, select_k_best, rfe, lasso, none
+# Method: select_k_best, model_importance, variance, rfe, lasso, none
 method = "select_k_best"
+# Scoring function for select_k_best: f_classif, mutual_info
+scoring = "f_classif"
 # Number of features to select (if applicable)
-n_features = 100
+n_features = 10
 
 [modeling]
 # List of models to train (choose from: linear, random_forest, xgboost, lightgbm, svm, neural_net)
