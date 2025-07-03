@@ -71,6 +71,6 @@ include_plots = true
 export_csv = true
 
 [visualization]
-figure_size = [10, 6]
+figure_size = [8, 5]
 color_palette = "viridis"
-dpi = 100
+dpi = 300

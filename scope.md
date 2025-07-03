@@ -13,17 +13,10 @@ classifyanything/
 ├── notebooks/
 │   ├── 01_data_ingestion.ipynb          # Load and validate data
 │   ├── 02_data_exploration.ipynb        # EDA and quality assessment
-│   ├── 03_preprocessing.ipynb           # Cleaning, imputation, normalization
-│   ├── 04_train_test_split.ipynb        # Split data into train/test sets
-│   ├── 05_feature_selection.ipynb       # Feature selection (ONLY on training data)
-│   ├── 06-01_linear_models.ipynb        # Logistic Regression + tuning
-│   ├── 06-02_random_forest.ipynb        # Random Forest + tuning
-│   ├── 06-03_xgboost.ipynb              # XGBoost + tuning
-│   ├── 06-04_lightgbm.ipynb             # LightGBM + tuning
-│   ├── 06-05_svm.ipynb                  # SVM + tuning
-│   ├── 06-06_neural_network.ipynb       # Neural Network + tuning
-│   ├── 07_model_comparison.ipynb        # Compare all tuned models
-│   └── 08_reporting.ipynb               # Generate final reports
+│   ├── 03_preprocessing.ipynb           # Cleaning, train-test split, feature engineering
+│   ├── 04_model_training.ipynb          # Train and tune multiple models
+│   ├── 05_model_evaluation.ipynb        # Evaluate and compare models
+│   └── 06_model_deployment.ipynb        # Deploy best model and generate reports
 ├── data/
 │   ├── raw/                             # Original data files
 │   └── processed/                       # Pickle files between notebooks
@@ -39,19 +32,53 @@ classifyanything/
 
 ## Data Flow and Best Practices
 - Each notebook loads its input data from the previous step (using pickle files) and saves its output for the next step.
-- **Train/test split is performed before feature selection** to prevent data leakage.
-- **Feature selection is performed only on the training set**. The selected features are then applied to the test set.
-- Each model is trained and tuned in its own notebook, using only the training data and selected features.
+- **Train/test split is performed early in preprocessing** to prevent data leakage.
+- **Feature engineering is performed only on the training set** and then applied to the test set.
+- **No data leakage**: Test set remains completely unseen during all preprocessing steps.
+- Each model is trained and tuned using only the training data and engineered features.
 - Model comparison and reporting are handled in dedicated notebooks.
 - All code, explanations, and results are contained within the notebooks for maximum clarity and reproducibility.
 
 ---
 
 ## Data Leakage Prevention
-- **Never perform feature selection or preprocessing using the test set.**
+- **Train-test split happens early** (after basic cleaning, before feature engineering)
+- **Feature engineering uses only training data** to fit transformers
+- **Test data remains completely unseen** during feature engineering
+- **Transformers are fitted on training data** and applied to both sets
 - All feature selection and model tuning steps must use only the training data.
 - The test set is used strictly for final evaluation and comparison.
 - This workflow follows best practices for machine learning and ensures valid, unbiased model evaluation.
+
+---
+
+## Preprocessing Workflow (03_preprocessing.ipynb)
+1. **Data Cleaning** (Before Split)
+   - Missing value treatment
+   - Outlier detection and handling
+   - Duplicate removal
+   - Basic data type validation
+
+2. **Train-Test Split** (Early)
+   - Split data based on config settings
+   - Ensure stratification by target variable
+   - Save split indices for reproducibility
+
+3. **Feature Engineering** (After Split - Training Data Only)
+   - Feature selection (correlation removal, variance selection)
+   - Feature transformation (normalization, scaling)
+   - Categorical encoding (if applicable)
+   - All transformers fitted on training data only
+
+4. **Data Validation**
+   - Quality checks after preprocessing
+   - Statistical validation
+   - Ensure no data leakage
+
+5. **Save Processed Data**
+   - Clean training and test sets
+   - Preprocessing pipeline objects
+   - Feature metadata and documentation
 
 ---
 
@@ -67,6 +94,7 @@ classifyanything/
 - **Accessibility**: No need for custom Python modules or imports; everything is in the notebooks.
 - **Modularity**: Easy to modify, rerun, or extend any step.
 - **Best Practices**: Prevents data leakage and ensures robust model evaluation.
+- **Proper ML Workflow**: Follows standard machine learning best practices.
 
 ---
 
