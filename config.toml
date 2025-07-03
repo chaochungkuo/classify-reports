@@ -1,0 +1,76 @@
+# Configuration file for ClassifyAnything notebook pipeline
+#
+# Input Data Format:
+# - The input file should be a table (CSV, TSV, or Excel) with samples as rows and features as columns.
+# - One column must contain the target labels (classification outcome).
+# - Optionally, one column can contain unique sample IDs.
+# - All feature columns should be numeric (gene expression, measurements, etc.).
+# - The label column can be string or integer (e.g., 'Control', 'Disease', or 0/1/2).
+# - Missing values are allowed and will be handled during preprocessing.
+#
+# Example (CSV):
+# Sample_ID,Gene_001,Gene_002,Gene_003,Label
+# Sample_1,2.34,0.45,1.23,Control
+# Sample_2,1.87,0.67,1.45,Control
+# Sample_3,3.12,0.23,1.67,Disease
+# Sample_4,2.01,0.89,1.89,Disease
+# Sample_5,2.78,0.34,1.12,Control
+#
+# - 'Sample_ID' is optional but recommended for traceability.
+# - 'Label' is required and should contain the class for each sample.
+# - All other columns are treated as features.
+
+[data]
+# Path to the input data file (CSV, TSV, or Excel)
+input_path = "../data/test_input.csv"
+# Name of the column containing sample IDs (optional)
+sample_id_column = "sample_id"
+# Name of the column containing target labels
+label_column = "label"
+# List of feature columns to use (leave empty to auto-detect)
+feature_columns = []
+
+[preprocessing]
+# Imputation strategy for missing values: mean, median, most_frequent, knn, none
+imputation_strategy = "mean"
+# Outlier detection method: iqr, zscore, isolation_forest, none
+outlier_method = "iqr"
+# Normalization method: zscore, minmax, robust, none
+normalization_method = "zscore"
+
+[split]
+# Proportion of data to use for the test set (e.g., 0.2 for 20%)
+test_size = 0.2
+# Random seed for reproducibility
+random_state = 42
+# Stratify split by label (true/false)
+stratify = true
+
+[feature_selection]
+# Method: variance, select_k_best, rfe, lasso, none
+method = "select_k_best"
+# Number of features to select (if applicable)
+n_features = 100
+
+[modeling]
+# List of models to train (choose from: linear, random_forest, xgboost, lightgbm, svm, neural_net)
+models = ["linear", "random_forest", "xgboost", "lightgbm", "svm", "neural_net"]
+# Cross-validation folds for model evaluation
+cv_folds = 5
+# Enable class imbalance handling (auto, class_weight, smote, oversample, none)
+class_imbalance = "auto"
+
+[reporting]
+# Output directory for reports and results
+output_dir = "results"
+# Generate HTML report (true/false)
+generate_html = true
+# Include plots in report (true/false)
+include_plots = true
+# Export predictions and metrics as CSV (true/false)
+export_csv = true
+
+[visualization]
+figure_size = [10, 6]
+color_palette = "viridis"
+dpi = 100
