@@ -62,6 +62,33 @@ cv_folds = 5
 # Enable class imbalance handling (auto, class_weight, smote, oversample, none)
 class_imbalance = "auto"
 
+[hyperparameter_tuning]
+# Search method: grid, random, bayesian
+search_method = "grid"
+# Maximum iterations for random/bayesian search
+max_iterations = 100
+# Parallel processing
+n_jobs = -1
+
+[model_specific]
+# Neural network configuration
+neural_net_epochs = 100
+neural_net_batch_size = 32
+neural_net_early_stopping = true
+neural_net_patience = 10
+
+# SVM configuration
+svm_cache_size = 1000
+
+# Tree-based models
+tree_max_depth = 10
+tree_n_estimators = 100
+
+# XGBoost configuration
+xgboost_n_estimators = 100
+xgboost_learning_rate = 0.1
+xgboost_max_depth = 6
+
 [reporting]
 # Output directory for reports and results
 output_dir = "results"
