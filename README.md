@@ -1,4 +1,4 @@
-# ClassifyAnything: Notebook-based ML Classification Pipeline
+# Notebook-based ML Classification Pipeline
 
 A modular, notebook-driven machine learning pipeline for classification tasks.  
 Configuration is managed via `config.toml`, and each step is a separate, reproducible notebook.
