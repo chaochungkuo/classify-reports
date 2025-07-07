@@ -81,7 +81,7 @@ def handle_class_imbalance(X_train, y_train, strategy):
             class_counts.index, 
             len(y_train) / (len(class_counts) * class_counts)
         ))
-        return X_train, y_train, class_weights
+        return X_train, y_train
     
     elif strategy == "smote":
         # Simple oversampling for now (can be enhanced with SMOTE later)

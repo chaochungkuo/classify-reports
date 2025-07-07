@@ -29,6 +29,8 @@ sample_id_column = "sample_id"
 label_column = "label"
 # List of feature columns to use (leave empty to auto-detect)
 feature_columns = []
+# List of columns to exclude
+exclude_columns = []
 
 [preprocessing]
 # Imputation strategy for missing values: mean, median, most_frequent, knn, none
@@ -37,6 +39,8 @@ imputation_strategy = "mean"
 outlier_method = "iqr"
 # Normalization method: zscore, minmax, robust, none
 normalization_method = "zscore"
+# Log transformation to apply to feature columns: none, log2, log10, ln
+log_transform = "none"
 
 [split]
 # Proportion of data to use for the test set (e.g., 0.2 for 20%)
@@ -88,16 +92,6 @@ tree_n_estimators = 100
 xgboost_n_estimators = 100
 xgboost_learning_rate = 0.1
 xgboost_max_depth = 6
-
-[reporting]
-# Output directory for reports and results
-output_dir = "results"
-# Generate HTML report (true/false)
-generate_html = true
-# Include plots in report (true/false)
-include_plots = true
-# Export predictions and metrics as CSV (true/false)
-export_csv = true
 
 [visualization]
 figure_size = [8, 5]
