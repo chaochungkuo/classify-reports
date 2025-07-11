@@ -2,7 +2,7 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
-from sklearn.model_selection import GridSearchCV, cross_val_score
+from sklearn.model_selection import GridSearchCV, cross_val_score, StratifiedKFold
 from sklearn.linear_model import LogisticRegression
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.svm import SVC
@@ -13,10 +13,44 @@ import xgboost as xgb
 import lightgbm as lgb
 import warnings
 import logging
+from sklearn.base import clone
+from sklearn.feature_selection import SelectKBest, f_classif, mutual_info_classif, VarianceThreshold
 
-# Set up logging
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
+
+
+def feature_selection(X, y, method, scoring, n_features):
+    if method == 'select_k_best':
+        if scoring == 'f_classif':
+            selector = SelectKBest(score_func=f_classif, k=n_features)
+        elif scoring == 'mutual_info':
+            selector = SelectKBest(score_func=mutual_info_classif, k=n_features)
+        else:
+            raise ValueError(f"Unknown scoring function for select_k_best: {scoring}")
+        selector.fit(X, y)
+        scores = selector.scores_
+        feature_scores = pd.Series(scores, index=X.columns)
+        selected_features = X.columns[selector.get_support()]
+        return feature_scores, selected_features, scoring
+
+    elif method == 'model_importance':
+        rf = RandomForestClassifier(n_estimators=100, random_state=42)
+        rf.fit(X, y)
+        importances = rf.feature_importances_
+        feature_scores = pd.Series(importances, index=X.columns)
+        selected_features = feature_scores.nlargest(n_features).index
+        return feature_scores, selected_features, 'Random Forest Importance'
+
+    elif method == 'variance':
+        selector = VarianceThreshold()
+        selector.fit(X)
+        variances = selector.variances_
+        feature_scores = pd.Series(variances, index=X.columns)
+        selected_features = feature_scores.nlargest(n_features).index
+        return feature_scores, selected_features, 'Variance'
+
+    else:
+        raise ValueError(f"Unknown feature selection method: {method}")
+
 
 def detect_classification_type(y):
     """
@@ -155,7 +189,8 @@ class ModelFactory:
                     "C": [0.1, 1, 10, 100],
                     "penalty": ["l1", "l2"],
                     "solver": ["liblinear", "saga"]
-                }
+                },
+                "fixed_params": {}
             }
         
         elif model_name == "random_forest":
@@ -166,7 +201,8 @@ class ModelFactory:
                     "max_depth": [None, 10, 20],
                     "min_samples_split": [2, 5, 10],
                     "min_samples_leaf": [1, 2, 4]
-                }
+                },
+                "fixed_params": {}
             }
         
         elif model_name == "xgboost":
@@ -178,7 +214,8 @@ class ModelFactory:
                     "learning_rate": [0.01, 0.1, 0.3],
                     "subsample": [0.8, 1.0],
                     "colsample_bytree": [0.8, 1.0]
-                }
+                },
+                "fixed_params": {}
             }
         
         elif model_name == "lightgbm":
@@ -191,7 +228,8 @@ class ModelFactory:
                     "num_leaves": [31, 63, 127],
                     "subsample": [0.8, 1.0],
                     "colsample_bytree": [0.8, 1.0]
-                }
+                },
+                "fixed_params": {}
             }
         
         elif model_name == "svm":
@@ -201,7 +239,8 @@ class ModelFactory:
                     "C": [0.1, 1, 10],
                     "kernel": ["rbf", "linear"],
                     "gamma": ["scale", "auto", 0.001, 0.01]
-                }
+                },
+                "fixed_params": {}
             }
         
         elif model_name == "neural_net":
@@ -212,55 +251,115 @@ class ModelFactory:
                     "activation": ["relu", "tanh"],
                     "alpha": [0.0001, 0.001, 0.01],
                     "learning_rate_init": [0.001, 0.01]
-                }
+                },
+                "fixed_params": {}
             }
         
         else:
             raise ValueError(f"Unknown model: {model_name}")
 
-def train_model_with_cv(model_name, model_config, X_train, y_train, cv_folds=5, n_jobs=-1):
+def nested_cv_train_model(
+    model_name,
+    model_config,
+    X,
+    y,
+    method,
+    scoring,
+    n_features,
+    outer_folds=5,
+    inner_folds=3,
+    n_jobs=-1
+):
     """
-    Train a model using cross-validation and hyperparameter tuning.
-    
-    Args:
-        model_name: Name of the model
-        model_config: Model configuration dictionary
-        X_train: Training features
-        y_train: Training labels
-        cv_folds: Number of CV folds
-        n_jobs: Number of parallel jobs
-    
+    Train a model using nested cross-validation with feature selection in the outer loop
+    and hyperparameter tuning in the inner loop.
+
     Returns:
-        dict: Training results
+        dict with model, best score, selected features, and evaluation details.
     """
     try:
-        logger.info(f"Training {model_name} with cross-validation...")
-        
-        # Create GridSearchCV object
-        grid_search = GridSearchCV(
-            estimator=model_config["model"],
-            param_grid=model_config["param_grid"],
-            cv=cv_folds,
-            scoring='f1_weighted' if model_config["model"].__class__.__name__ in ['XGBClassifier', 'LGBMClassifier'] else 'f1_weighted',
-            n_jobs=n_jobs,
-            verbose=0
+        print(f"Training {model_name} using nested cross-validation...")
+
+        outer_cv = StratifiedKFold(n_splits=outer_folds, shuffle=True, random_state=42)
+        outer_scores = []
+        outer_best_params = []
+        outer_selected_features = []
+        outer_models = []
+        outer_cv_results = []
+        le = LabelEncoder()
+        y_encoded = le.fit_transform(y)
+        for fold_idx, (train_idx, val_idx) in enumerate(outer_cv.split(X, y), start=1):
+            print(f"Outer Fold {fold_idx}/{outer_folds}")
+
+            X_train_outer, X_val_outer = X.iloc[train_idx], X.iloc[val_idx]
+            y_train_outer, y_val_outer = y[train_idx], y[val_idx]
+
+            # --- Feature Selection in the outer training fold ---
+            feature_scores, selected_features, importance_type = feature_selection(
+                X_train_outer, y_train_outer, method, scoring, n_features
+            )
+
+            X_train_fs = X_train_outer[selected_features]
+            X_val_fs = X_val_outer[selected_features]
+
+            # --- Grid SearchCV on the selected features (inner CV loop) ---
+            inner_cv = StratifiedKFold(n_splits=inner_folds, shuffle=True, random_state=42)
+            grid_search = GridSearchCV(
+                estimator=clone(model_config["model"]),
+                param_grid=model_config["param_grid"],
+                cv=inner_cv,
+                scoring='f1_weighted',
+                n_jobs=n_jobs,
+                verbose=0
+            )
+            grid_search.fit(X_train_fs, y_train_outer)
+
+            # --- Evaluate on outer validation fold ---
+            best_model = grid_search.best_estimator_
+            y_val_pred = best_model.predict(X_val_fs)
+            score = f1_score(y_val_outer, y_val_pred, average='weighted')
+
+            print(f"  Outer Fold {fold_idx} Score: {score:.4f}")
+
+            outer_scores.append(score)
+            outer_best_params.append(grid_search.best_params_)
+            outer_selected_features.append(selected_features)
+            outer_models.append(best_model)
+            outer_cv_results.append(grid_search.cv_results_)
+
+        # --- Final Model Training on Full Dataset ---
+        best_fold_idx = int(np.argmax(outer_scores))
+        best_params = outer_best_params[best_fold_idx]
+        best_features = outer_selected_features[best_fold_idx]
+        best_cv_results = outer_cv_results[best_fold_idx]
+
+        print(f"Best outer fold: {best_fold_idx+1} with score {outer_scores[best_fold_idx]:.4f}")
+
+        # Global feature selection for final model
+        global_feature_scores, global_features, global_importance_type = feature_selection(
+            X, y, method, scoring, n_features
         )
-        
-        # Fit the model
-        grid_search.fit(X_train, y_train)
-        
-        logger.info(f"{model_name} best score: {grid_search.best_score_:.3f}")
-        
+        X_final = X[global_features]
+
+        final_model = clone(model_config["model"])
+        final_model.set_params(**best_params)
+        final_model.fit(X_final, y)
+
         return {
             "status": "success",
-            "model": grid_search.best_estimator_,
-            "best_params": grid_search.best_params_,
-            "best_score": grid_search.best_score_,
-            "cv_results": grid_search.cv_results_
+            "model": final_model,
+            "best_score": outer_scores[best_fold_idx],
+            "all_scores": outer_scores,
+            "selected_features": global_features,
+            "feature_scores": global_feature_scores,
+            "importance_type": global_importance_type,
+            "best_params": best_params,
+            "cv_results": best_cv_results,
+            'label_encoder': le
         }
-        
+
     except Exception as e:
-        logger.error(f"Error training {model_name}: {str(e)}")
+        print(f"Error in nested CV for {model_name}: {str(e)}")
         return {
             "status": "failed",
             "error": str(e)

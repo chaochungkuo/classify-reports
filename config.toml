@@ -22,7 +22,8 @@
 
 [data]
 # Path to the input data file (CSV, TSV, or Excel)
-input_path = "../data/test_input.csv"
+# input_path = "../data/test_input.csv"
+input_path = "/Users/jovesus/github/classifyanything/data/miRNAseq/final_combined_counts.csv"
 # Name of the column containing sample IDs (optional)
 sample_id_column = "sample_id"
 # Name of the column containing target labels
@@ -40,13 +41,13 @@ outlier_method = "iqr"
 # Normalization method: zscore, minmax, robust, none
 normalization_method = "zscore"
 # Log transformation to apply to feature columns: none, log2, log10, ln
-log_transform = "none"
+log_transform = "log10"
 
 [split]
 # Proportion of data to use for the test set (e.g., 0.2 for 20%)
 test_size = 0.2
 # Random seed for reproducibility
-random_state = 42
+random_state = 11
 # Stratify split by label (true/false)
 stratify = true
 
